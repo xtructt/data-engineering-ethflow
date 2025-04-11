@@ -174,3 +174,8 @@ cython_debug/
 .pypirc
 /output/*
 */.aws-sam/*
+
+# Terraform
+.terraform/*
+*.tfstate
+*.tfstate.backup
