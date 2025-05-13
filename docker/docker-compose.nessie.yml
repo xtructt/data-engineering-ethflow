@@ -1,0 +1,45 @@
+services:
+  mongo:
+    image: mongo
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: password
+  nessie:
+    image: ghcr.io/projectnessie/nessie:latest
+    ports:
+      - "19120:19120"
+    depends_on:
+      - mongo
+    environment:
+      - AWS_ACCESS_KEY_ID=${aws_access_key_id}
+      - AWS_SECRET_ACCESS_KEY=${aws_secret_access_key}
+      - nessie.version.store.type=MONGODB
+      - quarkus.mongodb.database=nessie
+      - quarkus.mongodb.connection-string=mongodb://root:password@mongo:27017
+      - NESSIE_CATALOG_SERVICE_S3_DEFAULT_OPTIONS_ENDPOINT=https://s3.us-east-1.amazonaws.com
+      - NESSIE_CATALOG_SERVICE_S3_DEFAULT_OPTIONS_REGION=us-east-1
+      - NESSIE_CATALOG_SERVICE_S3_DEFAULT_OPTIONS_BUCKET={S3_DEFAULT_OPTIONS_BUCKET}
+      - nessie.catalog.default-warehouse=warehouse
+      - nessie.catalog.warehouses.warehouse.location={warehouse_location}
+  trino:
+      image: trinodb/trino:latest
+      ports:
+        - "8085:8080"
+      volumes:
+        - ./trino-config:/etc/trino/catalog
+      depends_on:
+        - nessie  
+  notebook:
+    image: jupyter/all-spark-notebook
+    ports:
+      - "8888:8888"
+    volumes:
+      - ./notebooks:/home/jovyan/work
+    environment:
+      - JUPYTER_ENABLE_LAB=yes
+      - AWS_ACCESS_KEY_ID=${aws_access_key_id}
+      - AWS_SECRET_ACCESS_KEY=${aws_secret_access_key}
+    depends_on:
+      - trino
